@@ -83,4 +83,9 @@ complaint_trends = data.groupby('month')['complaints'].apply(lambda x: Counter([
 print("Tendances des plaintes par mois:")
 print(complaint_trends)
 
+# Traitement de la colonne id
+data['id'] = data['id'].apply(lambda x: float(x.replace(',', '.')))
+data['id'] = data['id'].apply(lambda x: f'{x:.0f}')
+data['id'] = data['id'].apply(lambda x: str(x)[:-13])
+
 data.to_csv("sanitized_tweets.csv")
