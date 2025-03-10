@@ -11,6 +11,7 @@ data['full_text'] = data['full_text'].str.replace(r'[^\w\s]', '')  # Enlever les
 # Nettoyer les données
 data['full_text'] = data['full_text'].str.lower()  # Convertir en minuscules
 data['full_text'] = data['full_text'].str.replace(r'[^\w\s]', '')  # Enlever les caractères spéciaux
+data['full_text'] = data['full_text'].astype(str).apply(lambda x: x.replace('\n', ' ').replace('\\n', ' ')) # Enlever les "\n" 
 
 emoji_pattern = re.compile(
     "["
