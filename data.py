@@ -88,6 +88,14 @@ data['id'] = data['id'].apply(lambda x: float(x.replace(',', '.')))
 data['id'] = data['id'].apply(lambda x: f'{x:.0f}')
 data['id'] = data['id'].apply(lambda x: str(x)[:-13])
 
+# Extraction des arobases mentionnés
+data['mentions'] = data['full_text'].str.findall(r'@\w+')
+
+# Suppression des arobase
+data['full_text'] = data['full_text'].str.replace(r'@\w+', '', regex=True)
+
+print(data)
+
 data.to_csv("sanitized_tweets.csv")
 
 ### Calcul des KPIs ###
