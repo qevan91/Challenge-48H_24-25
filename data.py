@@ -61,3 +61,44 @@ print("Tendances des plaintes par mois:")
 print(complaint_trends)
 
 data.to_csv("sanitized_tweets.csv")
+
+### Calcul des KPIs ###
+data['date'] = data['created_at'].dt.date
+data['month'] = data['created_at'].dt.to_period('M')
+
+# Nombre de tweets par jour/semaine/mois
+tweets_per_day = data['date'].value_counts().sort_index()
+tweets_per_week = data.resample('W', on='created_at').size()
+tweets_per_month = data.groupby('month').size()
+
+# Fréquence des mentions des comptes Engie
+mentions_per_day = data[data['full_text'].str.contains('@engie')]['date'].value_counts().sort_index()
+mentions_per_week = data[data['full_text'].str.contains('@engie')].resample('W', on='created_at').size()
+mentions_per_month = data[data['full_text'].str.contains('@engie')].groupby('month').size()
+
+# Détection des tweets contenant des mots-clés critiques
+keywords_critiques = ['délai', 'panne', 'urgence', 'scandale', 'arnaque', 'escroquerie', 'fraude', "scandaleux", "inacceptable", "impossible", "intolérable", "absurde", "ridicule", "honte", "honteux", "chaos", "chaotique", "catastrophe", "catastrophique", "désastre", "désastreux", "échec", "échoué", "problème", "problématique", "grave", "sérieux", "important", "critique", "difficile", "compliqué", "injuste", "injustice", "injustifié", "injustifiable", "injustifié"]
+critical_tweets = data[data['full_text'].apply(lambda x: any(kw in x for kw in keywords_critiques))]
+
+# Score d'inconfort moyen
+average_discomfort_score = data['discomfort_score'].mean()
+
+# Nombre de plaintes par catégorie
+complaint_counts = Counter([complaint for complaints in data['complaints'] for complaint in complaints])
+
+# Afficher les résultats
+print("Nombre de tweets en moyenne par jour / semaine / mois :")
+print(f"{tweets_per_day.mean()} / {tweets_per_week.mean()} / {tweets_per_month.mean()}")
+
+print("\nFréquence des mentions des comptes Engie par jour / semaine / mois :")
+print(f"{mentions_per_day.mean()} / {mentions_per_week.mean()} / {mentions_per_month.mean()}")
+
+print("\nNombre de tweets contenant des mots-clés critiques:")
+print(f"{len(critical_tweets)}/{data['complaints'].count()}")
+
+print("\nScore d'inconfort moyen:")
+print(average_discomfort_score)
+
+print("\nNombre de plaintes par catégorie:")
+for category, count in complaint_counts.items():
+    print(f"{category}: {count} ({count/len(complaint_counts.keys())} %)")
