@@ -3,6 +3,7 @@ from collections import Counter
 import re
 
 data = pd.read_csv("filtered_tweets_engie.csv", on_bad_lines='skip', delimiter=';')
+data_sentiment = pd.read_csv("sanitized_tweets_sentiment.csv", on_bad_lines='skip', delimiter=',')
 
 # Nettoyer les données
 data['full_text'] = data['full_text'].str.lower()  # Convertir en minuscules
@@ -11,7 +12,6 @@ data['full_text'] = data['full_text'].str.replace(r'[^\w\s]', '')  # Enlever les
 # Nettoyer les données
 data['full_text'] = data['full_text'].str.lower()  # Convertir en minuscules
 data['full_text'] = data['full_text'].str.replace(r'[^\w\s]', '')  # Enlever les caractères spéciaux
-data['full_text'] = data['full_text'].astype(str).apply(lambda x: x.replace('\n', ' ').replace('\\n', ' ')) # Enlever les "\n" 
 
 emoji_pattern = re.compile(
     "["
@@ -70,11 +70,32 @@ data['discomfort_score'] = data['complaints'].apply(calculate_discomfort_score)
 # Analyse des plaintes
 complaint_counts = Counter([category for categories in data['complaints'] for category in categories])
 
-# Afficher les résultats
-print("Nombre de plaintes par catégorie:")
-for category, count in complaint_counts.items():
-    print(f"{category}: {count}")
-    
+# Analyse du pourcentage de pl aintes par catégories
+def pourcentage_complaints_by_category(category):
+    return (complaint_counts[category] / len(data)) * 100
+
+# Calculer le pourcentage pour chaque catégorie
+pourcentage_complaints_by_categories = {category: pourcentage_complaints_by_category(category) for category in complaint_counts.keys()}
+
+# Affichage des résultats
+print(pourcentage_complaints_by_categories)
+
+# Analyse de la répartition des sentiments
+sentiments = ['Positif', 'Négatif', 'Neutre']
+sentiment_counts = {sentiment: sum(data_sentiment['sentiment'] == sentiment) for sentiment in sentiments}
+sentiment_percentages = {sentiment: (sentiment_counts[sentiment] / len(data_sentiment)) * 100 for sentiment in sentiments}
+
+# Affichage des résultats
+print(sentiment_percentages)
+
+# Détection des tweets contenant des mots-clés critiques
+keywords_critiques = ['délai', 'panne', 'urgence', 'scandale', 'arnaque', 'escroquerie', 'fraude', "scandaleux", "inacceptable", "impossible", "intolérable", "absurde", "ridicule", "honte", "honteux", "chaos", "chaotique", "catastrophe", "catastrophique", "désastre", "désastreux", "échec", "échoué", "problème", "problématique", "grave", "sérieux", "important", "critique", "difficile", "compliqué", "injuste", "injustice", "injustifié", "injustifiable", "injustifié"]
+critical_tweets = data[data['full_text'].apply(lambda x: any(kw in x for kw in keywords_critiques))]
+critical_tweets_percentage = (len(critical_tweets) / data['complaints'].count()) * 100
+
+# Affichage des résultats
+print(critical_tweets_percentage)
+
 # Optionnel: Analyse des tendances
 # Par exemple, analyser les plaintes par date
 
@@ -95,8 +116,6 @@ data['mentions'] = data['full_text'].str.findall(r'@\w+')
 # Suppression des arobase
 data['full_text'] = data['full_text'].str.replace(r'@\w+', '', regex=True)
 
-print(data)
-
 data.to_csv("sanitized_tweets.csv")
 
 ### Calcul des KPIs ###
@@ -112,10 +131,6 @@ tweets_per_month = data.groupby('month').size()
 mentions_per_day = data[data['full_text'].str.contains('@engie')]['date'].value_counts().sort_index()
 mentions_per_week = data[data['full_text'].str.contains('@engie')].resample('W', on='created_at').size()
 mentions_per_month = data[data['full_text'].str.contains('@engie')].groupby('month').size()
-
-# Détection des tweets contenant des mots-clés critiques
-keywords_critiques = ['délai', 'panne', 'urgence', 'scandale', 'arnaque', 'escroquerie', 'fraude', "scandaleux", "inacceptable", "impossible", "intolérable", "absurde", "ridicule", "honte", "honteux", "chaos", "chaotique", "catastrophe", "catastrophique", "désastre", "désastreux", "échec", "échoué", "problème", "problématique", "grave", "sérieux", "important", "critique", "difficile", "compliqué", "injuste", "injustice", "injustifié", "injustifiable", "injustifié"]
-critical_tweets = data[data['full_text'].apply(lambda x: any(kw in x for kw in keywords_critiques))]
 
 # Score d'inconfort moyen
 average_discomfort_score = data['discomfort_score'].mean()
@@ -139,3 +154,8 @@ print(average_discomfort_score)
 print("\nNombre de plaintes par catégorie:")
 for category, count in complaint_counts.items():
     print(f"{category}: {count} ({count/len(complaint_counts.keys())} %)")
+
+# Afficher les pourcentages pour vérification
+print("Pourcentage des plaintes par catégorie ajouté au CSV:")
+for category, percentage in pourcentage_complaints_by_categories.items():
+    print(f"{category}: {percentage:.2f}%")
