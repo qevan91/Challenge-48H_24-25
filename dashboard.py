@@ -1,65 +1,62 @@
-# import streamlit as st
-# import pandas as pd
-
-# # --- Charger un fichier CSV directement depuis son nom ---
-# fichier_csv = "sanitized_tweets_sentiment.csv"  # Remplacez par le nom de votre fichier
-
-# try:
-#     df = pd.read_csv(fichier_csv, sep=";", on_bad_lines="skip", encoding="utf-8")  # ou sep="\t" si c'est un fichier TSV
-
-#     # --- Afficher un aperçu des données ---
-#     st.title("📂 Visualisation du fichier CSV")
-#     st.subheader("📊 Aperçu des données :")
-#     st.dataframe(df)  # Affiche le tableau interactif
-
-#     # --- Statistiques de base ---
-#     st.subheader("📈 Statistiques descriptives :")
-#     st.write(df.describe())
-
-#     # --- Sélection d'une colonne pour afficher un graphique ---
-#     columns = df.columns.tolist()
-#     selected_column = st.selectbox("Choisissez une colonne à visualiser", columns)
-
-#     st.subheader(f"📉 Graphique de la colonne : {selected_column}")
-#     st.line_chart(df[selected_column])  # Affiche un graphique de la colonne sélectionnée
-
-#     st.success("✅ Fichier chargé avec succès !")
-
-# except FileNotFoundError:
-#     st.error(f"⚠️ Le fichier `{fichier_csv}` n'a pas été trouvé. Vérifiez son emplacement.")
-
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from collections import Counter
 
-# --- Charger le fichier CSV ---
-fichier_csv = "sanitized_tweets_sentiment.csv"
+# --- Charger les données ---
+data = pd.read_csv("filtered_tweets_engie.csv", delimiter=';', on_bad_lines='skip')
+data_sentiment = pd.read_csv("sanitized_tweets_sentiment.csv", delimiter=',', on_bad_lines='skip')
 
-df = pd.read_csv(fichier_csv, sep=",", on_bad_lines="skip", encoding="utf-8")
+# Convertir les dates
+if 'created_at' in data.columns:
+    data['created_at'] = pd.to_datetime(data['created_at'], utc=True)
+    data['date'] = data['created_at'].dt.date
 
-# --- Afficher un aperçu des données ---
-st.title("📂 Dashboard interactif des tweets")
+st.title("📊 Dashboard des tweets")
 
-st.subheader("📊 Aperçu des données :")
-st.dataframe(df.head())
+# --- Graphique : Nombre de tweets par jour ---
+st.subheader("📆 Nombre de tweets par mois")
+data['month'] = data['created_at'].dt.to_period('M')
+tweets_per_month = data['month'].value_counts().sort_index()
+fig, ax = plt.subplots()
+ax.plot(tweets_per_month.index.astype(str), tweets_per_month.values, marker='o', linestyle='-')
+ax.set_xlabel("Mois")
+ax.set_ylabel("Nombre de tweets")
+ax.set_title("Nombre de tweets par mois")
+plt.xticks(rotation=45)
+st.pyplot(fig)
+# --- Graphique : Répartition des sentiments ---
+st.subheader("😊 Répartition des sentiments")
+sentiments = ['Positif', 'Négatif', 'Neutre']
+sentiment_counts = [sum(data_sentiment['sentiment'] == sentiment) for sentiment in sentiments]
+fig, ax = plt.subplots()
+ax.pie(sentiment_counts, labels=sentiments, startangle=90, colors=['green', 'red', 'gray'])
+ax.set_title("Répartition des tweets par sentiment")
+st.pyplot(fig)
 
-# --- Sélectionner une colonne numérique pour le graphique ---
-numeric_cols = df["sentiment"]
-selected_numeric_col = st.selectbox("Choisissez une colonne numérique à visualiser", numeric_cols)
+# --- Graphique : Mots les plus utilisés dans les plaintes ---
 
-# --- Choisir le type de graphique ---
-chart_type = st.radio(
-    "Sélectionnez le type de graphique :",
-    ('Graphique en ligne', 'Histogramme', 'Barres'))
 
-st.subheader(f"📉 {chart_type} pour la colonne : {selected_numeric_col}")
+# --- Graphique : Pourcentage de tweets avec des mots-clés critiques ---
+st.subheader("⚠️ Pourcentage de tweets critiques")
+keywords_critiques = ['délai', 'panne', 'urgence', 'scandale', 'arnaque', 'fraude', 'problème', 'grave', 'critique']
+critical_tweets = data[data['full_text'].apply(lambda x: any(kw in str(x) for kw in keywords_critiques))]
+critical_percentage = (len(critical_tweets) / len(data)) * 100
+st.metric(label="Tweets critiques", value=f"{critical_percentage:.2f}%")
 
-# --- Afficher le graphique choisi ---
-if chart_type == 'Graphique en ligne':
-    st.line_chart(df["sentiment"])
-elif chart_type == 'Histogramme':
-    st.histogram_chart(df["sentiment"])
-elif chart_type == 'Barres':
-    st.bar_chart(df["sentiment"])
+# --- Graphique : Volume de plaintes par utilisateur ---
+st.subheader("👥 Volume de plaintes par utilisateur")
+if 'user_screen_name' in data.columns:
+    top_complainers = data['user_screen_name'].value_counts().nlargest(10)
+    fig, ax = plt.subplots()
+    ax.bar(top_complainers.index, top_complainers.values, color='blue')
+    ax.set_xlabel("Utilisateur")
+    ax.set_ylabel("Nombre de plaintes")
+    ax.set_title("Top 10 des utilisateurs ayant déposé le plus de plaintes")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-st.success("✅ Visualisation réussie !")
+st.success("✅ Dashboard mis à jour avec succès !")
+
 
