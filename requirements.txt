@@ -1,0 +1,11 @@
+pandas
+numpy
+mistralai
+time
+json
+streamlit
+collections
+re
+os
+matplotlib
+wordcloud
