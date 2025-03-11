@@ -5,7 +5,7 @@ from wordcloud import WordCloud
 from collections import Counter
 
 # --- Charger les données ---
-data = pd.read_csv("filtered_tweets_engie.csv", delimiter=';', on_bad_lines='skip')
+data = pd.read_csv("sanitized_tweets.csv", delimiter=',', on_bad_lines='skip')
 data_sentiment = pd.read_csv("sanitized_tweets_sentiment.csv", delimiter=',', on_bad_lines='skip')
 
 # Convertir les dates
@@ -44,19 +44,5 @@ keywords_critiques = ['délai', 'panne', 'urgence', 'scandale', 'arnaque', 'frau
 critical_tweets = data[data['full_text'].apply(lambda x: any(kw in str(x) for kw in keywords_critiques))]
 critical_percentage = (len(critical_tweets) / len(data)) * 100
 st.metric(label="Tweets critiques", value=f"{critical_percentage:.2f}%")
-
-# --- Graphique : Volume de plaintes par utilisateur ---
-st.subheader("👥 Volume de plaintes par utilisateur")
-if 'user_screen_name' in data.columns:
-    top_complainers = data['user_screen_name'].value_counts().nlargest(10)
-    fig, ax = plt.subplots()
-    ax.bar(top_complainers.index, top_complainers.values, color='blue')
-    ax.set_xlabel("Utilisateur")
-    ax.set_ylabel("Nombre de plaintes")
-    ax.set_title("Top 10 des utilisateurs ayant déposé le plus de plaintes")
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
-
-st.success("✅ Dashboard mis à jour avec succès !")
 
 
